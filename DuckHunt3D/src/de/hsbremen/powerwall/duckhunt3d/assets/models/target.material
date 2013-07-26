@@ -1,0 +1,30 @@
+// Materials for target
+
+material Mat.2
+{
+	technique
+	{
+		pass
+		{
+			diffuse 0.87 0.87 0.87 1.00
+			
+		}
+	}
+}
+
+material Mat
+{
+	technique
+	{
+		pass
+		{
+			diffuse 0.80 0.80 0.80 1.00
+			
+			texture_unit
+			{
+				texture Zielscheibe.png
+			}
+		}
+	}
+}
+

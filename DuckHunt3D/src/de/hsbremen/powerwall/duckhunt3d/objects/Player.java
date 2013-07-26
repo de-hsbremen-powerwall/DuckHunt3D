@@ -11,16 +11,18 @@ public class Player {
 	private int score;
 	private int bullets;
 	private int shells;
+	private String name;
 	
 	/**
 	 * 
-	 * @param pNumber //TODO maybe remove this
+	 * @param pNumber
 	 *	
 	 */
 	public Player(int pNumber){
 		score = 0;
 		bullets = 6;
 		shells = 0;
+		name = String.valueOf(pNumber);
 	}
 	
 	public int getScore() {
@@ -51,6 +53,10 @@ public class Player {
 
 	public int getShells() {
 		return shells;
+	}
+
+	public String getName() {
+		return name;
 	}
 
 }

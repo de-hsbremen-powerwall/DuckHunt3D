@@ -160,9 +160,6 @@ public class Duck {
 		//add duck
 		duckList.add(this);
 		shootablesNode.attachChild(duckList.get(duckList.size()-1).getDuckGeo());
-		
-		//TODO remove this when debugging is finished
-		System.out.println("Duck created at " + this.pos + " Total Ducks: " + duckList.size());
 	}
 	
 	/**

@@ -50,11 +50,11 @@ public class PowerwallCamera {
 		
 		leftView = renderManager.createMainView("LeftView", leftCam);
 		leftView.setClearFlags(true, true, true);
-		leftView.setBackgroundColor(new ColorRGBA(63/255,191/255,1,1));
+		//leftView.setBackgroundColor(new ColorRGBA(63/255,191/255,1,1));
 		
 		rightView = renderManager.createMainView("RightView", rightCam);
 		rightView.setClearFlags(true, true, true);
-		rightView.setBackgroundColor(new ColorRGBA(255/255,191/255,1,1));
+		//rightView.setBackgroundColor(new ColorRGBA(255/255,191/255,1,1));
 	}
 	
 	public void lookAt(Vector3f position, Vector3f world) {

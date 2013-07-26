@@ -5,15 +5,22 @@ import java.util.List;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.audio.AudioNode;
+import com.jme3.collision.CollisionResult;
+import com.jme3.collision.CollisionResults;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.input.controls.MouseButtonTrigger;
+import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Matrix3f;
+import com.jme3.math.Ray;
+import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import com.jme3.ui.Picture;
 
@@ -25,7 +32,7 @@ import de.hsbremen.powerwall.duckhunt3d.objects.ShootingRange;
 /**
  * 
  * @author Hendrik
- *
+ * 
  */
 public class DuckHunt3D extends SimpleApplication {
 
@@ -33,6 +40,7 @@ public class DuckHunt3D extends SimpleApplication {
 	private Node shootables;
 	private Node hudNode;
 	private Node cursorNode;
+	private Node menuNode;
 
 	// audionodes
 	private AudioNode audioGun;
@@ -51,7 +59,24 @@ public class DuckHunt3D extends SimpleApplication {
 
 	// stuff
 	private Vector3f origin;
-	private float myTimer;
+	private float globalTimer;
+	private float roundTime = 10;
+	private float currentRoundTime = roundTime;
+	float rotateX = 1.0f;
+
+	private Boolean firstRound = true;
+	Boolean draw = false;
+	String drawString = ("Unentschieden zwischen ");
+
+	BitmapText winnerText;
+
+	Spatial target;
+
+	private enum GameState {
+		MENU, RUNNING, END
+	};
+
+	private GameState currentState = GameState.MENU;
 
 	/**
 	 * create new Instances of DuckHunt3D
@@ -73,7 +98,7 @@ public class DuckHunt3D extends SimpleApplication {
 		settings.setFullscreen(false);
 
 		// change title for the moment
-		settings.setTitle(" ");
+		settings.setTitle("DUCKHUNT 3D");
 
 		// apply settings
 		app.setSettings(settings);
@@ -96,6 +121,7 @@ public class DuckHunt3D extends SimpleApplication {
 		shootables = new Node("Shootables");
 		hudNode = new Node("Hud Node");
 		cursorNode = new Node("Cursor Node");
+		menuNode = new Node("Menu Node");
 
 		// add node for ducks to root
 		rootNode.attachChild(shootables);
@@ -120,9 +146,41 @@ public class DuckHunt3D extends SimpleApplication {
 		playerList.add(new Player(3));
 		playerList.add(new Player(4));
 
-		// TODO add HUD to both viewports
+		// TODO add HUD to both viewports if possible
 		drawCrosshair();
 		drawHud();
+
+		// draw Timer for HUD
+		hudTexts.add(new BitmapText(guiFont, false));
+		hudTexts.get(playerList.size()).setSize(
+				guiFont.getCharSet().getRenderedSize());
+		hudTexts.get(playerList.size()).setColor(ColorRGBA.White);
+		hudTexts.get(playerList.size()).setLocalTranslation(
+				settings.getWidth() / 4
+						- hudTexts.get(playerList.size()).getLineWidth(),
+				settings.getHeight() - 2, 0);
+		hudNode.attachChild(hudTexts.get(playerList.size()));
+
+		// draw Menu
+		// Load target model
+		target = assetManager
+				.loadModel("de/hsbremen/powerwall/duckhunt3d/assets/models/target.mesh.xml");
+		target.scale(0.01f, 0.01f, 0.01f);
+		target.setLocalTranslation(8.0f, -1.0f, 1.0f);
+		target.rotate(1.50f, -0.70f, 0.0f);
+		menuNode.attachChild(target);
+		
+		Spatial duckhunt3d = assetManager
+				.loadModel("de/hsbremen/powerwall/duckhunt3d/assets/models/duckhunt3d.mesh.xml");
+		duckhunt3d.scale(0.02f, 0.02f, 0.02f);
+		duckhunt3d.setLocalTranslation(-2.0f, 0.8f, 0.0f);
+		duckhunt3d.rotate(0.0f, 0.0f, 0.0f);
+		menuNode.attachChild(duckhunt3d);
+
+		DirectionalLight sun = new DirectionalLight();
+		sun.setDirection(new Vector3f(8.0f, -3.0f, -15.0f));
+		menuNode.addLight(sun);
+
 	}
 
 	/**
@@ -243,93 +301,58 @@ public class DuckHunt3D extends SimpleApplication {
 
 			// shoot
 			if (name.equals("Shoot") && keyPressed) {
-				origin = cam.getWorldCoordinates(
-						inputManager.getCursorPosition(), 0.0f);
+				Vector2f mouseCoords = inputManager.getCursorPosition();
+				Ray ray = new Ray(cam.getWorldCoordinates(mouseCoords, 0), cam
+						.getWorldCoordinates(mouseCoords, 1)
+						.subtractLocal(cam.getWorldCoordinates(mouseCoords, 0))
+						.normalizeLocal());
 
-				// TODO make a real collision detection
-				float cursorX = origin.x;
-				//float cursorY = origin.y;
+				if (currentState.equals(GameState.MENU)) {
+					CollisionResults results = new CollisionResults();
+					menuNode.updateModelBound();
+					menuNode.updateGeometricState();
+					menuNode.collideWith(ray, results);
 
-				for (int i = 0; i < duckList.size(); i++) {
-					if (playerList.get(0).getBullets() != 0) {
-						if (duckList.get(i).getPos().x - .2 - cursorX < .1
-								&& duckList.get(i).getPos().x + .2 - cursorX > -.1) {
-							if (duckList.get(i).isAlive()) {
-								duckList.get(i).die(shootables, duckList);
-								playerList.get(0).setScore(
-										duckList.get(i).getBounty());
-								audioHit.playInstance();
+					CollisionResult collision = results.getClosestCollision();
+
+					if (collision != null) {
+						currentState = GameState.RUNNING;
+					}
+					audioGun.playInstance();
+
+				} else if (currentState.equals(GameState.RUNNING)) {
+
+					CollisionResults results = new CollisionResults();
+					shootables.updateModelBound();
+					shootables.updateGeometricState();
+					shootables.collideWith(ray, results);
+
+					CollisionResult collision = results.getClosestCollision();
+					// Vector3f contact = collision.getContactPoint();
+
+					if (collision != null)
+						for (int i = 0; i < duckList.size(); i++) {
+							if (playerList.get(0).getBullets() != 0) {
+								if (duckList.get(i).getDuckGeo()
+										.equals(collision.getGeometry())) {
+									if (duckList.get(i).isAlive()) {
+										duckList.get(i).die(shootables,
+												duckList);
+										playerList.get(0).setScore(
+												duckList.get(i).getBounty());
+										audioHit.playInstance();
+									}
+								}
 							}
 						}
+					if (playerList.get(0).getBullets() != 0) {
+						audioGun.playInstance();
+						playerList.get(0).setBullets(1);
 					}
 				}
-				if (playerList.get(0).getBullets() != 0) {
-					audioGun.playInstance();
-					playerList.get(0).setBullets(1);
-				}
 			}
-		}
+		};
 	};
-
-	/**
-	 * main update cycle
-	 */
-	@Override
-	public void simpleUpdate(float tpf) {
-
-		// TODO change this to wiimotePositions
-		// show crosshair at current cursor position
-		cursorNode.setLocalTranslation(inputManager.getCursorPosition().x,
-				inputManager.getCursorPosition().y, 0);
-
-		for (int i = 0; i < playerList.size(); i++) {
-			// get current score of all players in playerList and update score in gui
-			hudTexts.get(i).setText(
-					"Player " + (i + 1) + ": "
-							+ String.valueOf(playerList.get(i).getScore()));
-			// get bullets of all players in playerList and update bullets in gui
-			// first "remove" all
-			for (int j = 0; j < 6; j++) {
-				bulletNodes.get(i).getChild(j).setLocalScale(0);
-			}
-			// then show all that are currently available
-			for (int j = 0; j < playerList.get(i).getBullets(); j++) {
-				bulletNodes.get(i).getChild(j).setLocalScale(10, 15, 1);
-			}
-		}
-
-		// set a timer
-		myTimer += Math.round(tpf * 50);
-
-		// cycle duck animation
-		if (myTimer % 10 == 0) {
-			for (int i = 0; i < duckList.size(); i++) {
-				duckList.get(i).cycle();
-			}
-		}
-
-		// create a new duck
-		if (myTimer % 100 == 0) {
-			@SuppressWarnings("unused")
-			Duck duck = new Duck(shootables, duckList, assetManager,
-					newDuckPos());
-		}
-
-		// update duck positions
-		for (int i = 0; i < duckList.size(); i++) {
-			duckList.get(i).setPos(new Vector3f(duckList.get(i).getSpeed()));
-			if (duckList.get(i).getPos().x > 30
-					|| duckList.get(i).getPos().x < -30
-					|| duckList.get(i).getPos().y < -30
-					|| duckList.get(i).getPos().y > 30) {
-				System.out.println("Duck removed");
-				shootables.detachChildNamed(duckList.get(i).getDuckGeo()
-						.getName());
-				duckList.remove(i);
-			}
-		}
-		rootNode.updateGeometricState();
-	}
 
 	/**
 	 * @return returns a random position for a duck
@@ -390,7 +413,8 @@ public class DuckHunt3D extends SimpleApplication {
 
 	/**
 	 * returns a random value between two doubles you define
-	 * @param double low 
+	 * 
+	 * @param double low
 	 * @param double high
 	 * @return double random
 	 */
@@ -414,6 +438,141 @@ public class DuckHunt3D extends SimpleApplication {
 
 		cursorNode.attachChild(crosshair);
 		guiNode.attachChild(cursorNode);
+	}
 
+	/**
+	 * main update cycle
+	 */
+	@Override
+	public void simpleUpdate(float tpf) {
+
+		// show crosshair at current cursor position
+		cursorNode.setLocalTranslation(inputManager.getCursorPosition().x,
+				inputManager.getCursorPosition().y, 0);
+
+		switch (currentState) {
+		case MENU:
+			rootNode.attachChild(menuNode);
+			if (target.getLocalRotation().getX() <= 0.60f) {
+				rotateX *= -1;
+			} else if (target.getLocalRotation().getX() >= 0.7f) {
+				rotateX *= -1;
+			}
+
+			target.rotate(rotateX / 300, 0.0f, 0.0f);
+
+			break;
+		case RUNNING:
+			rootNode.detachChild(menuNode);
+
+			if (!firstRound)
+				guiNode.detachChild(winnerText);
+
+			if (currentRoundTime > 0) {
+				currentRoundTime -= (tpf);
+
+				// TODO change this to wiimotePositions
+
+				for (int i = 0; i < playerList.size(); i++) {
+					// get current score of all players in playerList and update
+					// score in gui
+					hudTexts.get(i).setText(
+							"Player "
+									+ (i + 1)
+									+ ": "
+									+ String.valueOf(playerList.get(i)
+											.getScore()));
+					// get bullets of all players in playerList and update
+					// bullets
+					// in gui
+					// first "remove" all
+					for (int j = 0; j < 6; j++) {
+						bulletNodes.get(i).getChild(j).setLocalScale(0);
+					}
+					// then show all that are currently available
+					for (int j = 0; j < playerList.get(i).getBullets(); j++) {
+						bulletNodes.get(i).getChild(j).setLocalScale(10, 15, 1);
+					}
+				}
+
+				hudTexts.get(playerList.size()).setText(
+						String.valueOf((int) currentRoundTime));
+
+				// set a timer
+				globalTimer += Math.round(tpf * 50);
+
+				// cycle duck animation
+				if (globalTimer % 10 == 0) {
+					for (int i = 0; i < duckList.size(); i++) {
+						duckList.get(i).cycle();
+					}
+				}
+
+				// create a new duck
+				if (globalTimer % 100 == 0) {
+					@SuppressWarnings("unused")
+					Duck duck = new Duck(shootables, duckList, assetManager,
+							newDuckPos());
+				}
+
+				// update duck positions
+				for (int i = 0; i < duckList.size(); i++) {
+					duckList.get(i).setPos(
+							new Vector3f(duckList.get(i).getSpeed()));
+					if (duckList.get(i).getPos().x > 30
+							|| duckList.get(i).getPos().x < -30
+							|| duckList.get(i).getPos().y < -30
+							|| duckList.get(i).getPos().y > 30) {
+						shootables.detachChildNamed(duckList.get(i)
+								.getDuckGeo().getName());
+						duckList.remove(i);
+					}
+				}
+				rootNode.updateGeometricState();
+
+			}
+
+			if (currentRoundTime <= 0) {
+				currentState = GameState.END;
+			}
+			break;
+		case END:
+			Player winner = playerList.get(0);
+			int highestScore = 0;
+
+			for (int i = 0; i < playerList.size(); i++) {
+				if (playerList.get(i).getScore() > highestScore) {
+					winner = playerList.get(i);
+					highestScore = playerList.get(i).getScore();
+				} else if (playerList.get(i).getScore() == highestScore) {
+					draw = true;
+					drawString += "Spieler " + playerList.get(i).getName() + " ";
+				}
+				//reset Game
+				playerList.get(i).reload();
+				playerList.get(i).setScore(-playerList.get(i).getScore());
+			}
+
+			winnerText = new BitmapText(guiFont);
+			winnerText.setSize(guiFont.getCharSet().getRenderedSize());
+			winnerText.setColor(ColorRGBA.White);
+			
+			if(!draw)
+			winnerText.setText("Spieler " + winner.getName() + " hat gewonnen!");
+			if(draw)
+			winnerText.setText(drawString);
+			
+			winnerText.setLocalTranslation(
+					settings.getWidth() / 4 - winnerText.getLineWidth() / 2,
+					settings.getHeight() / 2 - winnerText.getLineHeight(), 0);
+			guiNode.attachChild(winnerText);
+
+			currentRoundTime = roundTime;
+			draw = false;
+			currentState = GameState.MENU;
+
+			firstRound = false;
+			break;
+		}
 	}
 }
