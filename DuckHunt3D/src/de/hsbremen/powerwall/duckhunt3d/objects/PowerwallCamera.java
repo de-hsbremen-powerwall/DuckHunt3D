@@ -50,7 +50,7 @@ public class PowerwallCamera {
 		
 		leftView = renderManager.createMainView("LeftView", leftCam);
 		leftView.setClearFlags(true, true, true);
-		//leftView.setBackgroundColor(new ColorRGBA(63/255,191/255,1,1));
+		//leftView.setBackgroundColor(new ColorRGBA(29/255,108/255,239/255,1));
 		
 		rightView = renderManager.createMainView("RightView", rightCam);
 		rightView.setClearFlags(true, true, true);

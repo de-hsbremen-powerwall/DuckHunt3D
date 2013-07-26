@@ -19,6 +19,7 @@ import com.jme3.scene.shape.Quad;
 public class ShootingRange {
 
 	// Geometry
+	private Geometry skyGeo;
 	private Geometry grassLightGeo;
 	private Geometry grassDarkGeo;
 	private Geometry bigTreeGeo;
@@ -26,6 +27,7 @@ public class ShootingRange {
 	private Geometry floorGeo;
 
 	// Materials
+	private Material skyMat;
 	private Material grassDarkMat;
 	private Material grassLightMat;
 	private Material bigTreeMat;
@@ -33,6 +35,7 @@ public class ShootingRange {
 	private Material floorMat;
 
 	// Quads
+	private Quad quadMeshSky;
 	private Quad quadMeshGrassLight;
 	private Quad quadMeshGrassDark;
 	private Quad quadMeshBigTree;
@@ -56,7 +59,18 @@ public class ShootingRange {
 		dl.setDirection(Vector3f.UNIT_XYZ.negate());
 
 		// Setting up stage
-
+		
+		//sky
+		
+		quadMeshSky = new Quad(400,100);
+		skyGeo = new Geometry("Sky", quadMeshSky);
+		
+		skyMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+		skyMat.setTexture("ColorMap", assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/background.png"));
+		
+		skyGeo.setMaterial(skyMat);
+		skyGeo.setLocalTranslation(new Vector3f(-200f,-50f,-100f));
+		
 		// Earth(same layer as Grass Light)
 		quadMeshFloor = new Quad(2560 / 136, 136 / 136);
 		floorGeo = new Geometry("Quad", quadMeshFloor);
@@ -138,6 +152,7 @@ public class ShootingRange {
 
 		// attach all objects to scene
 		rootNode.addLight(dl);
+		rootNode.attachChild(skyGeo);
 		rootNode.attachChild(grassLightGeo);
 		rootNode.attachChild(grassDarkGeo);
 		rootNode.attachChild(floorGeo);

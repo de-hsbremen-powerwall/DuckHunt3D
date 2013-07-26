@@ -60,7 +60,7 @@ public class DuckHunt3D extends SimpleApplication {
 	// stuff
 	private Vector3f origin;
 	private float globalTimer;
-	private float roundTime = 10;
+	private float roundTime = 30;
 	private float currentRoundTime = roundTime;
 	float rotateX = 1.0f;
 
