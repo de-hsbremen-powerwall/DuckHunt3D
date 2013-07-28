@@ -15,7 +15,6 @@ import com.jme3.input.controls.KeyTrigger;
 import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Matrix3f;
 import com.jme3.math.Ray;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
@@ -28,6 +27,7 @@ import de.hsbremen.powerwall.duckhunt3d.objects.Duck;
 import de.hsbremen.powerwall.duckhunt3d.objects.Player;
 import de.hsbremen.powerwall.duckhunt3d.objects.PowerwallCamera;
 import de.hsbremen.powerwall.duckhunt3d.objects.ShootingRange;
+import de.hsbremen.powerwall.duckhunt3d.objects.WiiMoteManager;
 
 /**
  * 
@@ -65,12 +65,21 @@ public class DuckHunt3D extends SimpleApplication {
 	float rotateX = 1.0f;
 
 	private Boolean firstRound = true;
-	Boolean draw = false;
-	String drawString = ("Unentschieden zwischen ");
+	private Boolean draw = false;
+	private String drawString = ("Unentschieden zwischen ");
 
-	BitmapText winnerText;
+	private BitmapText winnerText;
 
-	Spatial target;
+	private Picture[] crosshair;
+
+	private Spatial target;
+
+	// WiiMote copied from Lars
+	static final int PLAYERS = 2;
+	static final int SCREEN_WIDTH = 1280;
+	static final int SCREEN_HEIGHT = 720;
+	static final boolean SENSORBAR_POS = false; // true = above, false = below
+	private WiiMoteManager wiiMgr;
 
 	private enum GameState {
 		MENU, RUNNING, END
@@ -78,17 +87,25 @@ public class DuckHunt3D extends SimpleApplication {
 
 	private GameState currentState = GameState.MENU;
 
+	public DuckHunt3D(WiiMoteManager mgr) {
+
+		wiiMgr = mgr;
+	}
+
 	/**
 	 * create new Instances of DuckHunt3D
 	 * 
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		WiiMoteManager mgr = new WiiMoteManager(PLAYERS, SCREEN_WIDTH,
+				SCREEN_HEIGHT, SENSORBAR_POS);
+
 		AppSettings settings = new AppSettings(true);
-		DuckHunt3D app = new DuckHunt3D();
+		DuckHunt3D app = new DuckHunt3D(mgr);
 
 		// set resolution for 2x720p as we use in our set-up
-		settings.setResolution(1280 * 2, 720);
+		settings.setResolution(SCREEN_WIDTH * 2, SCREEN_HEIGHT);
 		settings.setBitsPerPixel(32);
 
 		// limit fps
@@ -98,7 +115,7 @@ public class DuckHunt3D extends SimpleApplication {
 		settings.setFullscreen(false);
 
 		// change title for the moment
-		settings.setTitle("DUCKHUNT 3D");
+		settings.setTitle("");
 
 		// apply settings
 		app.setSettings(settings);
@@ -141,10 +158,9 @@ public class DuckHunt3D extends SimpleApplication {
 
 		// manually add 4 Players for testing
 		// TODO add for every wiiMote a Player
-		playerList.add(new Player(1));
-		playerList.add(new Player(2));
-		playerList.add(new Player(3));
-		playerList.add(new Player(4));
+		for (int i = 0; i < PLAYERS; i++) {
+			playerList.add(wiiMgr.getPlayer(i));
+		}
 
 		// TODO add HUD to both viewports if possible
 		drawCrosshair();
@@ -169,10 +185,10 @@ public class DuckHunt3D extends SimpleApplication {
 		target.setLocalTranslation(8.0f, -1.0f, 1.0f);
 		target.rotate(1.50f, -0.70f, 0.0f);
 		menuNode.attachChild(target);
-		
+
 		Spatial duckhunt3d = assetManager
 				.loadModel("de/hsbremen/powerwall/duckhunt3d/assets/models/duckhunt3d.mesh.xml");
-		duckhunt3d.scale(0.02f, 0.02f, 0.02f);
+		duckhunt3d.scale(0.025f, 0.018f, 0.02f);
 		duckhunt3d.setLocalTranslation(-2.0f, 0.8f, 0.0f);
 		duckhunt3d.rotate(0.0f, 0.0f, 0.0f);
 		menuNode.attachChild(duckhunt3d);
@@ -180,7 +196,6 @@ public class DuckHunt3D extends SimpleApplication {
 		DirectionalLight sun = new DirectionalLight();
 		sun.setDirection(new Vector3f(8.0f, -3.0f, -15.0f));
 		menuNode.addLight(sun);
-
 	}
 
 	/**
@@ -364,7 +379,6 @@ public class DuckHunt3D extends SimpleApplication {
 		float x = (float) MathRandom(-100, 100);
 
 		// determine whether the duck is outside or inside the screen
-		// TODO find a better solution this looks like crap
 		if (x < 0) {
 			if (z < 0)
 				x = 20;
@@ -428,15 +442,17 @@ public class DuckHunt3D extends SimpleApplication {
 	 * paints a crosshair at pointers position
 	 */
 	private void drawCrosshair() {
-		Picture crosshair = new Picture("Crosshair");
-		crosshair.setImage(assetManager,
-				"de/hsbremen/powerwall/duckhunt3d/assets/fadenkreuz.png", true);
-		crosshair.setWidth(50);
-		crosshair.setHeight(50);
-		crosshair.setPosition(inputManager.getCursorPosition().x,
-				inputManager.getCursorPosition().y);
+		crosshair = new Picture[playerList.size()];
+		for (int i = 0; i < PLAYERS; i++) {
+			crosshair[i] = new Picture("Crosshair" + i);
+			crosshair[i].setImage(assetManager,
+					"de/hsbremen/powerwall/duckhunt3d/assets/fadenkreuz" + i
+							+ ".png", true);
+			crosshair[i].setWidth(50);
+			crosshair[i].setHeight(50);
+			cursorNode.attachChild(crosshair[i]);
+		}
 
-		cursorNode.attachChild(crosshair);
 		guiNode.attachChild(cursorNode);
 	}
 
@@ -445,10 +461,109 @@ public class DuckHunt3D extends SimpleApplication {
 	 */
 	@Override
 	public void simpleUpdate(float tpf) {
+		// show crosshair for every active Player
+		for (int i = 0; i < wiiMgr.getPlayerCount(); i++) {
+			if (wiiMgr.isPointerModeActive(i)) {
+				crosshair[i]
+						.setLocalTranslation(wiiMgr.getPlayer(i).getX(),
+								-wiiMgr.getPlayer(i).getY()+720, wiiMgr
+										.getPlayer(i).getZ());
+			}
+		}
+		//Shoot		
+		// check players button states
+		for (int i = 0; i < wiiMgr.getPlayerCount(); i++) {
+			if (playerList.get(i).isAPressed() && wiiMgr.isPointerModeActive(i)) {
+				if (playerList.get(i).getBullets() > 0) {
+					
+					Vector2f crosshairCoords = new Vector2f(crosshair[i].getLocalTranslation().getX(),(720-crosshair[i].getLocalTranslation().getY()));
+					System.out.println(crosshairCoords);
+					Ray ray = new Ray(cam.getWorldCoordinates(crosshairCoords, 0), cam
+							.getWorldCoordinates(crosshairCoords, 1)
+							.subtractLocal(cam.getWorldCoordinates(crosshairCoords, 0))
+							.normalizeLocal());
 
-		// show crosshair at current cursor position
-		cursorNode.setLocalTranslation(inputManager.getCursorPosition().x,
-				inputManager.getCursorPosition().y, 0);
+					if (currentState.equals(GameState.MENU)) {
+						CollisionResults results = new CollisionResults();
+						menuNode.updateModelBound();
+						menuNode.updateGeometricState();
+						menuNode.collideWith(ray, results);
+
+						CollisionResult collision = results.getClosestCollision();
+
+						if (collision != null) {
+							currentState = GameState.RUNNING;
+						}
+						audioGun.playInstance();
+					} else if (currentState.equals(GameState.RUNNING)) {
+
+						CollisionResults results = new CollisionResults();
+						shootables.updateModelBound();
+						shootables.updateGeometricState();
+						shootables.collideWith(ray, results);
+
+						CollisionResult collision = results.getClosestCollision();
+						
+						if (collision != null)
+							for (int j = 0; j < duckList.size(); j++) {
+								if (playerList.get(i).getBullets() != 0) {
+									if (duckList.get(j).getDuckGeo()
+											.equals(collision.getGeometry())) {
+										if (duckList.get(j).isAlive()) {
+											duckList.get(j).die(shootables,
+													duckList);
+											playerList.get(i).setScore(
+													duckList.get(j).getBounty());
+											audioHit.playInstance();
+										}
+									}
+								}
+							}
+						if (playerList.get(i).getBullets() != 0) {
+							audioGun.playInstance();
+							playerList.get(i).setBullets(1);
+						}
+					}
+				}
+				playerList.get(i).setAPressed(false);
+			}
+
+			
+			//Reload
+			if (playerList.get(i).isBPressed()
+					&& playerList.get(i).getBullets() >= 0
+					&& wiiMgr.isPointerModeActive(i)) {
+				System.out.println("Player " + (i + 1) + ": B is pressed");
+				if (wiiMgr.isPointerModeActive(i))
+					wiiMgr.setMotionMode(i);
+				playerList.get(i).setBPressed(false);
+			}
+
+			if (playerList.get(i).getShells() != 6
+					&& playerList.get(i).getBullets() == 0
+					&& !wiiMgr.isPointerModeActive(i)
+					&& playerList.get(i).isMotionZActive()) {
+				audioInsertShell.playInstance();
+				playerList.get(i).addShell();
+				playerList.get(i).setMotionZActive(false);
+
+			} else if (playerList.get(i).getShells() == 6) {
+				audioReload.playInstance();
+				playerList.get(i).reload();
+				wiiMgr.setPointerMode(i);
+			}
+			
+			 //Force some wait before the next iteration starts
+			try {
+				for (int i1 = 0; i1 < playerList.size(); i1++) {
+					playerList.get(i).resetAllButtons();
+				}
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
 
 		switch (currentState) {
 		case MENU:
@@ -494,6 +609,7 @@ public class DuckHunt3D extends SimpleApplication {
 						bulletNodes.get(i).getChild(j).setLocalScale(10, 15, 1);
 					}
 				}
+				
 
 				hudTexts.get(playerList.size()).setText(
 						String.valueOf((int) currentRoundTime));
@@ -546,22 +662,25 @@ public class DuckHunt3D extends SimpleApplication {
 					highestScore = playerList.get(i).getScore();
 				} else if (playerList.get(i).getScore() == highestScore) {
 					draw = true;
-					drawString += "Spieler " + playerList.get(i).getName() + " ";
+					drawString += "Spieler " + playerList.get(i).getName()
+							+ " ";
 				}
-				//reset Game
+				// reset Game
 				playerList.get(i).reload();
 				playerList.get(i).setScore(-playerList.get(i).getScore());
+				wiiMgr.setPointerMode(i);
 			}
 
 			winnerText = new BitmapText(guiFont);
 			winnerText.setSize(guiFont.getCharSet().getRenderedSize());
 			winnerText.setColor(ColorRGBA.White);
-			
-			if(!draw)
-			winnerText.setText("Spieler " + winner.getName() + " hat gewonnen!");
-			if(draw)
-			winnerText.setText(drawString);
-			
+
+			if (!draw)
+				winnerText.setText("Spieler " + winner.getName()
+						+ " hat gewonnen!");
+			if (draw)
+				winnerText.setText(drawString);
+
 			winnerText.setLocalTranslation(
 					settings.getWidth() / 4 - winnerText.getLineWidth() / 2,
 					settings.getHeight() / 2 - winnerText.getLineHeight(), 0);
