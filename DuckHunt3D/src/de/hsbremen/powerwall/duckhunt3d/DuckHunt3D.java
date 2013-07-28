@@ -58,9 +58,8 @@ public class DuckHunt3D extends SimpleApplication {
 	public static List<Node> bulletNodes = new ArrayList<Node>();
 
 	// stuff
-	private Vector3f origin;
 	private float globalTimer;
-	private float roundTime = 30;
+	private float roundTime = 60;
 	private float currentRoundTime = roundTime;
 	float rotateX = 1.0f;
 
@@ -156,9 +155,8 @@ public class DuckHunt3D extends SimpleApplication {
 		// create shooting range
 		new ShootingRange(this.rootNode, this.assetManager);
 
-		// manually add 4 Players for testing
 		// TODO add for every wiiMote a Player
-		for (int i = 0; i < PLAYERS; i++) {
+		for (int i = 0; i < wiiMgr.getPlayerCount(); i++) {
 			playerList.add(wiiMgr.getPlayer(i));
 		}
 
@@ -177,6 +175,7 @@ public class DuckHunt3D extends SimpleApplication {
 				settings.getHeight() - 2, 0);
 		hudNode.attachChild(hudTexts.get(playerList.size()));
 
+		
 		// draw Menu
 		// Load target model
 		target = assetManager
@@ -443,7 +442,7 @@ public class DuckHunt3D extends SimpleApplication {
 	 */
 	private void drawCrosshair() {
 		crosshair = new Picture[playerList.size()];
-		for (int i = 0; i < PLAYERS; i++) {
+		for (int i = 0; i < playerList.size(); i++) {
 			crosshair[i] = new Picture("Crosshair" + i);
 			crosshair[i].setImage(assetManager,
 					"de/hsbremen/powerwall/duckhunt3d/assets/fadenkreuz" + i
@@ -461,6 +460,8 @@ public class DuckHunt3D extends SimpleApplication {
 	 */
 	@Override
 	public void simpleUpdate(float tpf) {
+		
+		
 		// show crosshair for every active Player
 		for (int i = 0; i < wiiMgr.getPlayerCount(); i++) {
 			if (wiiMgr.isPointerModeActive(i)) {
@@ -476,19 +477,24 @@ public class DuckHunt3D extends SimpleApplication {
 			if (playerList.get(i).isAPressed() && wiiMgr.isPointerModeActive(i)) {
 				if (playerList.get(i).getBullets() > 0) {
 					
-					Vector2f crosshairCoords = new Vector2f(crosshair[i].getLocalTranslation().getX(),(720-crosshair[i].getLocalTranslation().getY()));
-					System.out.println(crosshairCoords);
-					Ray ray = new Ray(cam.getWorldCoordinates(crosshairCoords, 0), cam
-							.getWorldCoordinates(crosshairCoords, 1)
-							.subtractLocal(cam.getWorldCoordinates(crosshairCoords, 0))
-							.normalizeLocal());
+					Vector2f crosshairCoords = new Vector2f(crosshair[i].getLocalTranslation().getX()*2,(crosshair[i].getLocalTranslation().getY()));
+					
+					Vector3f worldCoords= new Vector3f();
+					Vector3f worldCoords2= new Vector3f();
+					
+				    worldCoords.set( cam.getWorldCoordinates( crosshairCoords, 0 ) );
+				    worldCoords2.set( cam.getWorldCoordinates( crosshairCoords, 1 ) );
+					
+				    Ray ray = new Ray( worldCoords, worldCoords2.subtractLocal( worldCoords ).normalizeLocal() );
+
 
 					if (currentState.equals(GameState.MENU)) {
 						CollisionResults results = new CollisionResults();
 						menuNode.updateModelBound();
 						menuNode.updateGeometricState();
+						
 						menuNode.collideWith(ray, results);
-
+						
 						CollisionResult collision = results.getClosestCollision();
 
 						if (collision != null) {
@@ -531,9 +537,8 @@ public class DuckHunt3D extends SimpleApplication {
 			
 			//Reload
 			if (playerList.get(i).isBPressed()
-					&& playerList.get(i).getBullets() >= 0
+					&& playerList.get(i).getBullets() <= 0
 					&& wiiMgr.isPointerModeActive(i)) {
-				System.out.println("Player " + (i + 1) + ": B is pressed");
 				if (wiiMgr.isPointerModeActive(i))
 					wiiMgr.setMotionMode(i);
 				playerList.get(i).setBPressed(false);

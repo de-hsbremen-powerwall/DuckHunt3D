@@ -41,6 +41,7 @@ public class WiiMoteManager{
 			else
 				wiimotes[i].setSensorBarBelowScreen();
 		}
+
 		
 		System.out.println("WiiMoteManager initialized for " + player_count + " players with 16:9 aspect ratio (" + 
 		screenWidth + "x" + screenHeight + " px) with sensorbar above screen = " + sensorbar_position + ". Current mode: Pointer");
