@@ -21,7 +21,7 @@ import wiiusej.wiiusejevents.wiiuseapievents.StatusEvent;
 /**
  * creates player with score bullets and shells
  * 
- * @author HDDesign
+ * @author HDDesign && apocalyarts
  * 
  */
 public class Player implements WiimoteListener {
@@ -30,7 +30,7 @@ public class Player implements WiimoteListener {
 	private int shells;
 	private String name;
 
-	// WiiMote copied from Lars
+	// WiiMote copied from apocalyarts
 	private int pointer_x = 0;
 	private int pointer_y = 0;
 	private float pointer_z = 0;
@@ -108,7 +108,7 @@ public class Player implements WiimoteListener {
 		return name;
 	}
 
-	// WiiMote copied from Lars
+	// WiiMote copied from apocalyarts
 	public void resetAllButtons() {
 		buttonAPressed = false;
 		buttonBPressed = false;

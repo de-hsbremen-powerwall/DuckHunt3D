@@ -8,11 +8,6 @@ import com.jme3.audio.AudioNode;
 import com.jme3.collision.CollisionResult;
 import com.jme3.collision.CollisionResults;
 import com.jme3.font.BitmapText;
-import com.jme3.input.KeyInput;
-import com.jme3.input.MouseInput;
-import com.jme3.input.controls.ActionListener;
-import com.jme3.input.controls.KeyTrigger;
-import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Ray;
@@ -56,47 +51,50 @@ public class DuckHunt3D extends SimpleApplication {
 	public static List<Duck> duckList = new ArrayList<Duck>();
 	public static List<Player> playerList = new ArrayList<Player>();
 	public static List<BitmapText> hudTexts = new ArrayList<BitmapText>();
+	public static List<BitmapText> hudTexts2 = new ArrayList<BitmapText>();
 	public static List<Node> bulletNodes = new ArrayList<Node>();
+	public static List<Node> bulletNodes2 = new ArrayList<Node>();
 
-	// stuff
+	// gamelogic
 	private float globalTimer;
 	private float roundTime = 60;
 	private float currentRoundTime = roundTime;
-	float rotateX = 1.0f;
-	int crosshairSize = 50;
-
 	private Boolean firstRound = true;
 	private Boolean draw = false;
 	private String drawString = ("Unentschieden zwischen ");
-
-	private BitmapText winnerText;
-
+	
+	// miscellaneous graphics
+	int crosshairSize = 50; //set size and "difficulty" 25 == hard 50 == normal 100 == easy
 	private Picture[] crosshairLeft;
 	private Picture[] crosshairRight;
+	private BitmapText winnerText;
 
-	//target object to startGame
+	//target object to start game and animation
 	private Spatial target;
+	float rotateX = 1.0f;
 
-	// WiiMote copied from Lars
+	// WiiMote copied from apocalyarts
 	static final int PLAYERS = 2;
 	static final int SCREEN_WIDTH = 1280;
 	static final int SCREEN_HEIGHT = 720;
 	static final boolean SENSORBAR_POS = false; // true = above, false = below
 	private WiiMoteManager wiiMgr;
 
+	// gamestates assigned by simpleUpdate();
 	private enum GameState {
 		MENU, RUNNING, END
 	};
 
+	//initiate gamestate with menu
 	private GameState currentState = GameState.MENU;
 
+	//nesting to avoid crash
 	public DuckHunt3D(WiiMoteManager mgr) {
-
 		wiiMgr = mgr;
 	}
 
 	/**
-	 * create new Instances of DuckHunt3D
+	 * evil code
 	 * 
 	 * @param args
 	 */
@@ -132,7 +130,6 @@ public class DuckHunt3D extends SimpleApplication {
 	 */
 	@Override
 	public void simpleInitApp() {
-
 		// remove debugscreen
 		setDisplayStatView(false);
 		setDisplayFps(false);
@@ -167,9 +164,9 @@ public class DuckHunt3D extends SimpleApplication {
 			playerList.add(wiiMgr.getPlayer(i));
 		}
 
-		// TODO add HUD to both viewports if possible
 		drawCrosshair();
 		drawHud();
+		drawHud2();
 
 		// draw Timer for HUD
 		hudTexts.add(new BitmapText(guiFont, false));
@@ -182,6 +179,17 @@ public class DuckHunt3D extends SimpleApplication {
 				settings.getHeight() - 2, 0);
 		hudNode.attachChild(hudTexts.get(playerList.size()));
 
+		// draw Timer for HUD2
+				hudTexts2.add(new BitmapText(guiFont, false));
+				hudTexts2.get(playerList.size()).setSize(
+						guiFont.getCharSet().getRenderedSize());
+				hudTexts2.get(playerList.size()).setColor(ColorRGBA.White);
+				hudTexts2.get(playerList.size()).setLocalTranslation(
+						settings.getWidth() / 4
+								- hudTexts2.get(playerList.size()).getLineWidth(),
+						settings.getHeight() - 2, 0);
+				hudNode.attachChild(hudTexts2.get(playerList.size()));
+		
 		// draw Menu
 		// Load target model
 		target = assetManager
@@ -244,6 +252,53 @@ public class DuckHunt3D extends SimpleApplication {
 
 			// attach hudText to hudNode
 			hudNode.attachChild(hudTexts.get(i));
+
+			// attach hudNode to guiNode
+			guiNode.attachChild(hudNode);
+		}
+	}
+	
+	/**
+	 * draws a HUD for each Player in playerList
+	 */
+	private void drawHud2() {
+		for (int i = 0; i < playerList.size(); i++) {
+			// create background for score and bullets (black)
+			Picture guiBackgroundPic = new Picture("guiBack");
+			guiBackgroundPic.setImage(assetManager,
+					"de/hsbremen/powerwall/duckhunt3d/assets/black.png", false);
+			guiBackgroundPic.setWidth(150);
+			guiBackgroundPic.setHeight(50);
+			guiBackgroundPic.setPosition(30 + i * 350 + 1280, 0);
+			hudNode.attachChild(guiBackgroundPic);
+
+			// add a bullet node
+			bulletNodes2.add(new Node("Bullets"));
+
+			// add bullets to node
+			for (int j = 0; j < playerList.get(i).getBullets(); j++) {
+				Picture bulletPic = new Picture("Bullet");
+				bulletPic.setImage(assetManager,
+						"de/hsbremen/powerwall/duckhunt3d/assets/bulletP"
+								+ (i + 1) + ".png", true);
+				bulletPic.setWidth(10);
+				bulletPic.setHeight(15);
+				bulletNodes2.get(i).attachChild(bulletPic);
+				bulletPic.setPosition(i * 350 + 50 + j * 20 + 1280, 30);
+
+				// attach bulletNode to hudNode
+				hudNode.attachChild(bulletNodes2.get(i));
+			}
+
+			// add text for score
+			hudTexts2.add(new BitmapText(guiFont, false));
+			hudTexts2.get(i).setSize(guiFont.getCharSet().getRenderedSize());
+			hudTexts2.get(i).setColor(ColorRGBA.White);
+			hudTexts2.get(i).setLocalTranslation(50 + i * 350 + 1280,
+					hudTexts.get(i).getLineHeight(), 0);
+
+			// attach hudText to hudNode
+			hudNode.attachChild(hudTexts2.get(i));
 
 			// attach hudNode to guiNode
 			guiNode.attachChild(hudNode);
@@ -549,6 +604,12 @@ public class DuckHunt3D extends SimpleApplication {
 									+ ": "
 									+ String.valueOf(playerList.get(i)
 											.getScore()));
+					hudTexts2.get(i).setText(
+							"Player "
+									+ (i + 1)
+									+ ": "
+									+ String.valueOf(playerList.get(i)
+											.getScore()));
 					// get bullets of all players in playerList and update
 					// bullets
 					// in gui
@@ -560,9 +621,18 @@ public class DuckHunt3D extends SimpleApplication {
 					for (int j = 0; j < playerList.get(i).getBullets(); j++) {
 						bulletNodes.get(i).getChild(j).setLocalScale(10, 15, 1);
 					}
+					for (int j = 0; j < 6; j++) {
+						bulletNodes2.get(i).getChild(j).setLocalScale(0);
+					}
+					// then show all that are currently available
+					for (int j = 0; j < playerList.get(i).getBullets(); j++) {
+						bulletNodes2.get(i).getChild(j).setLocalScale(10, 15, 1);
+					}
 				}
 
 				hudTexts.get(playerList.size()).setText(
+						String.valueOf((int) currentRoundTime));
+				hudTexts2.get(playerList.size()).setText(
 						String.valueOf((int) currentRoundTime));
 
 				// set a timer

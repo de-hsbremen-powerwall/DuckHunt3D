@@ -2,6 +2,11 @@ package de.hsbremen.powerwall.duckhunt3d.objects;
 import wiiusej.WiiUseApiManager;
 import wiiusej.Wiimote;
 
+/**
+ * 
+ * @author apocalyarts
+ *
+ */
 public class WiiMoteManager{
 	
 	private Player[] players;

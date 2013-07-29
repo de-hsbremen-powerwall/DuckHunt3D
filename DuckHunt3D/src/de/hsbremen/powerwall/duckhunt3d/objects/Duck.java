@@ -103,14 +103,14 @@ public class Duck {
 				cycle3 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dgreen3.png");
 				die1 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/gdie.png");
 				die2 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/gdie2.png");
-				setSpeed((float) MathRandom(1.5, 1.8)/50,0,0);
+				setSpeed((float) MathRandom(3.5, 3.8)/50,0,0);
 			}else{
 				cycle1 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dgreenr.png");
 				cycle2 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dgreenr2.png");
 				cycle3 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dgreenr3.png");
 				die1 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/gdier.png");
 				die2 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/gdier2.png");
-				setSpeed(-(float) MathRandom(1.5, 1.8)/50,0,0);
+				setSpeed(-(float) MathRandom(3.5, 3.8)/50,0,0);
 			}
 			this.bounty = 2;
 			duckGeo.setName("green");
@@ -122,14 +122,14 @@ public class Duck {
 				cycle3 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dred3.png");
 				die1 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/rdie.png");
 				die2 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/rdie2.png");
-				setSpeed((float) MathRandom(2.0, 2.5)/50,0,0);
+				setSpeed((float) MathRandom(4.0, 4.5)/50,0,0);
 			}else{
 				cycle1 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dredr.png");
 				cycle2 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dredr2.png");
 				cycle3 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/dredr3.png");
 				die1 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/rdier.png");
 				die2 = assetManager.loadTexture("de/hsbremen/powerwall/duckhunt3d/assets/rdier2.png");
-				setSpeed(-(float) MathRandom(2.0, 2.5)/50,0,0);
+				setSpeed(-(float) MathRandom(4.0, 4.5)/50,0,0);
 			}
 			this.bounty = 3;
 			duckGeo.setName("red");
