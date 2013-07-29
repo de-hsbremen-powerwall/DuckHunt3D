@@ -39,7 +39,8 @@ public class DuckHunt3D extends SimpleApplication {
 	// graphicnodes
 	private Node shootables;
 	private Node hudNode;
-	private Node cursorNode;
+	private Node crosshairNodeLeft;
+	private Node crosshairNodeRight;
 	private Node menuNode;
 
 	// audionodes
@@ -62,6 +63,7 @@ public class DuckHunt3D extends SimpleApplication {
 	private float roundTime = 60;
 	private float currentRoundTime = roundTime;
 	float rotateX = 1.0f;
+	int crosshairSize = 50;
 
 	private Boolean firstRound = true;
 	private Boolean draw = false;
@@ -69,8 +71,10 @@ public class DuckHunt3D extends SimpleApplication {
 
 	private BitmapText winnerText;
 
-	private Picture[] crosshair;
+	private Picture[] crosshairLeft;
+	private Picture[] crosshairRight;
 
+	//target object to startGame
 	private Spatial target;
 
 	// WiiMote copied from Lars
@@ -136,7 +140,8 @@ public class DuckHunt3D extends SimpleApplication {
 		// create nodes
 		shootables = new Node("Shootables");
 		hudNode = new Node("Hud Node");
-		cursorNode = new Node("Cursor Node");
+		crosshairNodeLeft = new Node("Cursor Node");
+		crosshairNodeRight = new Node("Cursor Node2");
 		menuNode = new Node("Menu Node");
 
 		// add node for ducks to root
@@ -148,8 +153,10 @@ public class DuckHunt3D extends SimpleApplication {
 		pCam.setLocation(new Vector3f(0f, 0f, 12f));
 		renderManager.removeMainView(viewPort);
 
-		// init audio and controls
-		initKeys();
+		// translate second nodes
+		crosshairNodeRight.setLocalTranslation(new Vector3f(1280, 0, 0));
+
+		// init audio
 		initAudio();
 
 		// create shooting range
@@ -175,7 +182,6 @@ public class DuckHunt3D extends SimpleApplication {
 				settings.getHeight() - 2, 0);
 		hudNode.attachChild(hudTexts.get(playerList.size()));
 
-		
 		// draw Menu
 		// Load target model
 		target = assetManager
@@ -282,93 +288,6 @@ public class DuckHunt3D extends SimpleApplication {
 	}
 
 	/**
-	 * initiates controls and mapping
-	 */
-	private void initKeys() {
-		inputManager.addMapping("Shoot", new MouseButtonTrigger(
-				MouseInput.BUTTON_LEFT));
-		inputManager.addListener(actionListener, "Shoot");
-
-		inputManager.addMapping("reload", new KeyTrigger(KeyInput.KEY_R));
-		inputManager.addListener(actionListener, new String[] { "reload" });
-	}
-
-	/**
-	 * listener for controls
-	 */
-	private ActionListener actionListener = new ActionListener() {
-
-		public void onAction(String name, boolean keyPressed, float tpf) {
-
-			// reload
-			if (name.equals("reload") && !keyPressed) {
-				if (playerList.get(0).getShells() != 6
-						&& playerList.get(0).getBullets() == 0) {
-					audioInsertShell.playInstance();
-					playerList.get(0).addShell();
-				}
-				if (playerList.get(0).getShells() == 6) {
-					audioReload.playInstance();
-					playerList.get(0).reload();
-				}
-			}
-
-			// shoot
-			if (name.equals("Shoot") && keyPressed) {
-				Vector2f mouseCoords = inputManager.getCursorPosition();
-				Ray ray = new Ray(cam.getWorldCoordinates(mouseCoords, 0), cam
-						.getWorldCoordinates(mouseCoords, 1)
-						.subtractLocal(cam.getWorldCoordinates(mouseCoords, 0))
-						.normalizeLocal());
-
-				if (currentState.equals(GameState.MENU)) {
-					CollisionResults results = new CollisionResults();
-					menuNode.updateModelBound();
-					menuNode.updateGeometricState();
-					menuNode.collideWith(ray, results);
-
-					CollisionResult collision = results.getClosestCollision();
-
-					if (collision != null) {
-						currentState = GameState.RUNNING;
-					}
-					audioGun.playInstance();
-
-				} else if (currentState.equals(GameState.RUNNING)) {
-
-					CollisionResults results = new CollisionResults();
-					shootables.updateModelBound();
-					shootables.updateGeometricState();
-					shootables.collideWith(ray, results);
-
-					CollisionResult collision = results.getClosestCollision();
-					// Vector3f contact = collision.getContactPoint();
-
-					if (collision != null)
-						for (int i = 0; i < duckList.size(); i++) {
-							if (playerList.get(0).getBullets() != 0) {
-								if (duckList.get(i).getDuckGeo()
-										.equals(collision.getGeometry())) {
-									if (duckList.get(i).isAlive()) {
-										duckList.get(i).die(shootables,
-												duckList);
-										playerList.get(0).setScore(
-												duckList.get(i).getBounty());
-										audioHit.playInstance();
-									}
-								}
-							}
-						}
-					if (playerList.get(0).getBullets() != 0) {
-						audioGun.playInstance();
-						playerList.get(0).setBullets(1);
-					}
-				}
-			}
-		};
-	};
-
-	/**
 	 * @return returns a random position for a duck
 	 */
 	private Vector3f newDuckPos() {
@@ -441,18 +360,29 @@ public class DuckHunt3D extends SimpleApplication {
 	 * paints a crosshair at pointers position
 	 */
 	private void drawCrosshair() {
-		crosshair = new Picture[playerList.size()];
+		crosshairLeft = new Picture[playerList.size()];
+		crosshairRight = new Picture[playerList.size()];
 		for (int i = 0; i < playerList.size(); i++) {
-			crosshair[i] = new Picture("Crosshair" + i);
-			crosshair[i].setImage(assetManager,
+			crosshairLeft[i] = new Picture("Crosshair" + i);
+			crosshairLeft[i].setImage(assetManager,
 					"de/hsbremen/powerwall/duckhunt3d/assets/fadenkreuz" + i
 							+ ".png", true);
-			crosshair[i].setWidth(50);
-			crosshair[i].setHeight(50);
-			cursorNode.attachChild(crosshair[i]);
+			crosshairLeft[i].setWidth(crosshairSize);
+			crosshairLeft[i].setHeight(crosshairSize);
+			crosshairNodeLeft.attachChild(crosshairLeft[i]);
+		}
+		for (int i = 0; i < playerList.size(); i++) {
+			crosshairRight[i] = new Picture("Crosshair" + i);
+			crosshairRight[i].setImage(assetManager,
+					"de/hsbremen/powerwall/duckhunt3d/assets/fadenkreuz" + i
+							+ ".png", true);
+			crosshairRight[i].setWidth(crosshairSize);
+			crosshairRight[i].setHeight(crosshairSize);
+			crosshairNodeRight.attachChild(crosshairRight[i]);
 		}
 
-		guiNode.attachChild(cursorNode);
+		guiNode.attachChild(crosshairNodeLeft);
+		guiNode.attachChild(crosshairNodeRight);
 	}
 
 	/**
@@ -460,42 +390,59 @@ public class DuckHunt3D extends SimpleApplication {
 	 */
 	@Override
 	public void simpleUpdate(float tpf) {
-		
-		
-		// show crosshair for every active Player
+
+		// show crosshair for every active Player but only in Range of first
+		// Screen
 		for (int i = 0; i < wiiMgr.getPlayerCount(); i++) {
-			if (wiiMgr.isPointerModeActive(i)) {
-				crosshair[i]
-						.setLocalTranslation(wiiMgr.getPlayer(i).getX(),
-								-wiiMgr.getPlayer(i).getY()+720, wiiMgr
-										.getPlayer(i).getZ());
+			if (wiiMgr.isPointerModeActive(i)
+					&& wiiMgr.getPlayer(i).getX() < 1280 - crosshairLeft[i]
+							.getLocalScale().getX()
+					&& wiiMgr.getPlayer(i).getX() > 0
+					&& wiiMgr.getPlayer(i).getY() > 0 + crosshairLeft[i]
+							.getLocalScale().getY()
+					&& wiiMgr.getPlayer(i).getY() < 720) {
+				crosshairLeft[i].setLocalTranslation(
+						wiiMgr.getPlayer(i).getX(),
+						-wiiMgr.getPlayer(i).getY() + 720, wiiMgr.getPlayer(i)
+								.getZ());
+				crosshairRight[i].setLocalTranslation(wiiMgr.getPlayer(i)
+						.getX(), -wiiMgr.getPlayer(i).getY() + 720, wiiMgr
+						.getPlayer(i).getZ());
 			}
 		}
-		//Shoot		
+		// Shoot
 		// check players button states
 		for (int i = 0; i < wiiMgr.getPlayerCount(); i++) {
 			if (playerList.get(i).isAPressed() && wiiMgr.isPointerModeActive(i)) {
 				if (playerList.get(i).getBullets() > 0) {
-					
-					Vector2f crosshairCoords = new Vector2f(crosshair[i].getLocalTranslation().getX()*2,(crosshair[i].getLocalTranslation().getY()));
-					
-					Vector3f worldCoords= new Vector3f();
-					Vector3f worldCoords2= new Vector3f();
-					
-				    worldCoords.set( cam.getWorldCoordinates( crosshairCoords, 0 ) );
-				    worldCoords2.set( cam.getWorldCoordinates( crosshairCoords, 1 ) );
-					
-				    Ray ray = new Ray( worldCoords, worldCoords2.subtractLocal( worldCoords ).normalizeLocal() );
 
+					Vector2f crosshairCoords = new Vector2f(
+							crosshairLeft[i].getLocalTranslation().getX()
+									* 2
+									+ (crosshairLeft[i].getLocalScale().getX() * 2),
+							crosshairLeft[i].getLocalTranslation().getY()
+									+ (crosshairLeft[i].getLocalScale().getY() / 2));
+
+					Vector3f worldCoords = new Vector3f();
+					Vector3f worldCoords2 = new Vector3f();
+
+					worldCoords
+							.set(cam.getWorldCoordinates(crosshairCoords, 0));
+					worldCoords2.set(cam
+							.getWorldCoordinates(crosshairCoords, 1));
+
+					Ray ray = new Ray(worldCoords, worldCoords2.subtractLocal(
+							worldCoords).normalizeLocal());
 
 					if (currentState.equals(GameState.MENU)) {
 						CollisionResults results = new CollisionResults();
-						menuNode.updateModelBound();
-						menuNode.updateGeometricState();
-						
-						menuNode.collideWith(ray, results);
-						
-						CollisionResult collision = results.getClosestCollision();
+						target.updateModelBound();
+						target.updateGeometricState();
+
+						target.collideWith(ray, results);
+
+						CollisionResult collision = results
+								.getClosestCollision();
 
 						if (collision != null) {
 							currentState = GameState.RUNNING;
@@ -508,8 +455,9 @@ public class DuckHunt3D extends SimpleApplication {
 						shootables.updateGeometricState();
 						shootables.collideWith(ray, results);
 
-						CollisionResult collision = results.getClosestCollision();
-						
+						CollisionResult collision = results
+								.getClosestCollision();
+
 						if (collision != null)
 							for (int j = 0; j < duckList.size(); j++) {
 								if (playerList.get(i).getBullets() != 0) {
@@ -518,8 +466,11 @@ public class DuckHunt3D extends SimpleApplication {
 										if (duckList.get(j).isAlive()) {
 											duckList.get(j).die(shootables,
 													duckList);
-											playerList.get(i).setScore(
-													duckList.get(j).getBounty());
+											playerList
+													.get(i)
+													.setScore(
+															duckList.get(j)
+																	.getBounty());
 											audioHit.playInstance();
 										}
 									}
@@ -534,8 +485,7 @@ public class DuckHunt3D extends SimpleApplication {
 				playerList.get(i).setAPressed(false);
 			}
 
-			
-			//Reload
+			// Reload
 			if (playerList.get(i).isBPressed()
 					&& playerList.get(i).getBullets() <= 0
 					&& wiiMgr.isPointerModeActive(i)) {
@@ -557,8 +507,8 @@ public class DuckHunt3D extends SimpleApplication {
 				playerList.get(i).reload();
 				wiiMgr.setPointerMode(i);
 			}
-			
-			 //Force some wait before the next iteration starts
+
+			// Force some wait before the next iteration starts
 			try {
 				for (int i1 = 0; i1 < playerList.size(); i1++) {
 					playerList.get(i).resetAllButtons();
@@ -568,7 +518,6 @@ public class DuckHunt3D extends SimpleApplication {
 				e.printStackTrace();
 			}
 		}
-		
 
 		switch (currentState) {
 		case MENU:
@@ -591,8 +540,6 @@ public class DuckHunt3D extends SimpleApplication {
 			if (currentRoundTime > 0) {
 				currentRoundTime -= (tpf);
 
-				// TODO change this to wiimotePositions
-
 				for (int i = 0; i < playerList.size(); i++) {
 					// get current score of all players in playerList and update
 					// score in gui
@@ -614,7 +561,6 @@ public class DuckHunt3D extends SimpleApplication {
 						bulletNodes.get(i).getChild(j).setLocalScale(10, 15, 1);
 					}
 				}
-				
 
 				hudTexts.get(playerList.size()).setText(
 						String.valueOf((int) currentRoundTime));
